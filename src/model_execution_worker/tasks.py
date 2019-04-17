@@ -11,8 +11,9 @@ import os
 import shutil
 import tarfile
 import glob
-
 import sys
+import time
+
 from oasislmf.model_execution.bin import prepare_model_run_directory, prepare_model_run_inputs
 from oasislmf.model_execution import runner
 from oasislmf.utils import status
@@ -45,7 +46,10 @@ logging.info("WORKING_DIRECTORY: {}".format(settings.get('worker', 'WORKING_DIRE
 logging.info("KTOOLS_BATCH_COUNT: {}".format(settings.get('worker', 'KTOOLS_BATCH_COUNT')))
 logging.info("KTOOLS_ALLOC_RULE: {}".format(settings.get('worker', 'KTOOLS_ALLOC_RULE')))
 logging.info("KTOOLS_MEMORY_LIMIT: {}".format(settings.get('worker', 'KTOOLS_MEMORY_LIMIT')))
+logging.info("LOCK_TIMEOUT_IN_SECS: {}".format(settings.get('worker', 'LOCK_TIMEOUT_IN_SECS')))
 logging.info("LOCK_RETRY_COUNTDOWN_IN_SECS: {}".format(settings.get('worker', 'LOCK_RETRY_COUNTDOWN_IN_SECS')))
+logging.info("POST_ANALYSIS_SLEEP_IN_SECS: {}".format(settings.get('worker', 'POST_ANALYSIS_SLEEP_IN_SECS')))
+
 
 class MissingInputsException(OasisException):
     def __init__(self, input_archive):
@@ -65,7 +69,7 @@ class MissingModelDataException(OasisException):
 @contextmanager
 def get_lock():
     lock = fasteners.InterProcessLock(settings.get('worker', 'LOCK_FILE'))
-    gotten = lock.acquire(blocking=False, timeout=settings.getfloat('worker', 'LOCK_TIMEOUT_IN_SECS'))
+    gotten = lock.acquire(blocking=True, timeout=settings.getfloat('worker', 'LOCK_TIMEOUT_IN_SECS'))
     yield gotten
 
     if gotten:
@@ -89,8 +93,10 @@ def start_analysis_task(self, input_location, analysis_settings_json):
     with get_lock() as gotten:
         if not gotten:
             logging.info("Failed to get resource lock - retry task")
+            # max_retries=None is supposed to be unlimited but doesn't seem to work
+            # Set instead to a large number 
             raise self.retry(
-                max_retries=None,
+                max_retries=9999999,
                 countdown=settings.getint('worker', 'LOCK_RETRY_COUNTDOWN_IN_SECS'))
 
         logging.info("Acquired resource lock")
@@ -109,7 +115,8 @@ def start_analysis_task(self, input_location, analysis_settings_json):
             logging.exception("Model execution task failed.")
             raise
 
-        return output_location
+    time.sleep(settings.getint('worker', 'POST_ANALYSIS_SLEEP_IN_SECS'))
+    return output_location
 
 
 @oasis_log()
@@ -161,8 +168,13 @@ def start_analysis(analysis_settings, input_location):
     directory_name = "{}_{}_{}".format(source_tag, analysis_tag, uuid.uuid4().hex)
     working_directory = os.path.join(settings.get('worker', 'WORKING_DIRECTORY'), directory_name)
 
-    prepare_model_run_directory(working_directory, model_data_src_path=model_data_path, inputs_archive=input_archive)
-    prepare_model_run_inputs(analysis_settings['analysis_settings'], working_directory)
+    if 'ri_output' in analysis_settings['analysis_settings'].keys():
+        ri = analysis_settings['analysis_settings']['ri_output']
+    else:
+        ri = False
+
+    prepare_model_run_directory(working_directory, ri=ri, model_data_src_path=model_data_path, inputs_archive=input_archive)
+    prepare_model_run_inputs(analysis_settings['analysis_settings'], working_directory, ri=ri)
 
     with setcwd(working_directory):
         logging.info("Working directory = {}".format(working_directory))
@@ -179,14 +191,15 @@ def start_analysis(analysis_settings, input_location):
 
         ##! to add check that RI directories take the form of RI_{ID} amd ID is a monotonic index
 
-        num_reinsurance_iterations = len(glob.glob(os.path.join("input", 'RI_[0-9]')))
+        num_reinsurance_iterations = len(glob.glob('RI_[0-9]'))
 
         model_runner_module.run(
             analysis_settings['analysis_settings'], 
             settings.getint('worker', 'KTOOLS_BATCH_COUNT'), 
             num_reinsurance_iterations=num_reinsurance_iterations,
             ktools_mem_limit=settings.getboolean('worker', 'KTOOLS_MEMORY_LIMIT'),
-            set_alloc_rule=settings.getint('worker', 'KTOOLS_ALLOC_RULE')
+            set_alloc_rule=settings.getint('worker', 'KTOOLS_ALLOC_RULE'),
+            fifo_tmp_dir=False
         )
 
         output_location = uuid.uuid4().hex
