@@ -7,4 +7,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 ARG BRANCH=master
-RUN /bin/bash -c "pip install git+{https,ssh}://git@github.com/OasisLMF/OasisLMF.git@${BRANCH}#egg=oasislmf"
+RUN /bin/bash -c "pip install git+{https,ssh}://git@github.com/OasisLMF/OasisLMF_SQL.git@${BRANCH}#egg=oasislmf"
