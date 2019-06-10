@@ -1,9 +1,10 @@
 FROM ubuntu:18.04
 
 COPY ./apt.txt ./
-RUN apt update && \
-    apt upgrade -y && \
-    apt install -y $(grep -vE "^\s*#" apt.txt  | tr "\n" " ") && \
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y $(grep -vE "^\s*#" apt.txt  | tr "\n" " ") && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install oasislmf 
+ARG BRANCH=master
+RUN /bin/bash -c "pip install git+{https,ssh}://git@github.com/OasisLMF/OasisLMF_SQL.git@${BRANCH}#egg=oasislmf"
