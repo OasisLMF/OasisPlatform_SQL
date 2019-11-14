@@ -18,15 +18,12 @@ click==6.7                # via flask
 configparser==3.5.0
 coverage==4.5
 cryptography==2.3.1       # via pyopenssl
-enum34==1.1.6             # via cryptography, flake8, hypothesis
 fasteners==0.14.1
 flake8==3.5.0
 flask-swagger==0.2.13
 flask==0.12.3
-funcsigs==1.0.2           # via mock, pytest
 hypothesis==3.44.26
 idna==2.6                 # via cryptography, requests
-ipaddress==1.0.22         # via cryptography
 itsdangerous==0.24        # via flask
 jinja2==2.10              # via flask
 jsonpickle==0.9.5
@@ -50,14 +47,13 @@ pytest-cover==3.0.0       # via pytest-coverage
 pytest-coverage==0.0
 pytest==3.4.0
 pytz==2017.3              # via celery
-pyyaml==3.12              # via flask-swagger
+pyyaml==5.1.2
 requests==2.20.0
-scandir==1.6              # via pathlib2
 shutilwhich==1.1.0
 six==1.11.0               # via cryptography, fasteners, mock, pathlib2, pyopenssl, pytest, tox
 sqlalchemy==1.2.2
 tox==2.9.1
-urllib3==1.23             # via requests
+urllib3==1.24.2           # via requests
 vine==1.1.4               # via amqp
 virtualenv==15.1.0        # via tox
 werkzeug==0.14.1          # via flask
