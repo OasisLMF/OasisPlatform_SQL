@@ -1,4 +1,4 @@
-FROM coreoasis/oasis_base:0.398.5
+FROM coreoasis/oasis_base:0.399.0
 
 WORKDIR /var/www/oasis
 
