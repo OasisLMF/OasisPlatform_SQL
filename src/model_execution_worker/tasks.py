@@ -199,6 +199,7 @@ def start_analysis(analysis_settings, input_location):
             num_reinsurance_iterations=num_reinsurance_iterations,
             ktools_mem_limit=settings.getboolean('worker', 'KTOOLS_MEMORY_LIMIT'),
             set_alloc_rule=settings.getint('worker', 'KTOOLS_ALLOC_RULE'),
+            set_alloc_rule_gul=settings.getint('worker', 'KTOOLS_ALLOC_RULE_GUL'),
             fifo_tmp_dir=False
         )
 
